@@ -1,14 +1,23 @@
-# python 3.6
+# -*- coding: utf-8 -*-
+"""
+ MQTTuya - TinyTuya <-> MQTT Bridge
 
+ Author: Rui Pedro Henriques
+ For more information see https://github.com/rphenriques/mqttuya
+
+"""
+
+import json
+import os
 import random
 from paho.mqtt import client as mqtt_client
 import towel_heater
-import json
 # import sched, time
 
 # s = sched.scheduler(time.time, time.sleep)
 
 device_list = {}
+
 
 def create_device(device_data):
     """
@@ -17,17 +26,20 @@ def create_device(device_data):
     Args:
         device_data(json): device data
     """
-    #TODO: if IP is None, "Auto" or 0.0.0.0", init will find the device IP and VERSION. This should be used to set version
-    #TODO: BUT if IP is SET, the version returned may be wrong because find() is not used
-    aux_device = towel_heater.TowelHeaterDevice(device_data['id'], device_data['ip'], device_data['key'])
-    if(device_data['ver'] == '3.3'):    # IMPORTANT to always set version
-        aux_device.set_version(3.3)
-    else:
-        aux_device.set_version(3.1)
-    # Keep socket connection open between commands
-    #aux_device.set_socketPersistent(True)
-    device_list[device_data['id']] = aux_device
-    print(f"Created device {device_data['id']}")
+    for device in device_data:
+        # TODO: if IP is None, "Auto" or 0.0.0.0", init will find the device IP and VERSION. This should be used to set version
+        # TODO: BUT if IP is SET, the version returned may be wrong because find() is not used
+        aux_device = towel_heater.TowelHeaterDevice(
+            device['id'], device['ip'], device['key'])
+        if(device_data['ver'] == '3.3'):    # IMPORTANT to always set version
+            aux_device.set_version(3.3)
+        else:
+            aux_device.set_version(3.1)
+        # Keep socket connection open between commands
+        # aux_device.set_socketPersistent(True)
+        device_list[device['id']] = aux_device
+        print(f"Created device {device['id']}")
+
 
 def connect_mqtt(broker, port, username=None, password=None, client_id=None):
     """
@@ -50,6 +62,7 @@ def connect_mqtt(broker, port, username=None, password=None, client_id=None):
     client.connect(broker, port)
     return client
 
+
 def publish_status(client, device_id):
     """
     Publish status to MQTT Broker
@@ -64,27 +77,31 @@ def publish_status(client, device_id):
     status_topic = f"mqttuya/status/{device_id}"
     data_topic = f"mqttuya/data/{device_id}"
     print("Publishing status")
-    status_result = client.publish(status_topic, json.dumps(device_list[device_id].status()))
-    data_result = client.publish(data_topic, json.dumps(device_list[device_id].get_data()))
+    client.publish(
+        status_topic, json.dumps(device_list[device_id].status()))
+    client.publish(
+        data_topic, json.dumps(device_list[device_id].get_data()))
+
 
 def on_message(client, userdata, msg):
     """
-    Set target temp
-
-    Args:
-        target_temp(int): target_temp to set
+    Hook to be called when a message is received. Calls the appropriate function
+    depending on the cmd received.
     """
 
     data = json.loads(msg.payload)
     print(f"Received `{data}` from `{msg.topic}` topic")
     if 'cmd' not in data or 'id' not in data:
-        aux_msg = {'status': 'error', 'msg': 'Invalid message', 'original_msg': data}
-        status_result = client.publish("mqttuya/monitor", json.dumps(aux_msg))
+        aux_msg = {'status': 'error',
+                   'msg': 'Invalid message', 'original_msg': data}
+        client.publish("mqttuya/monitor", json.dumps(aux_msg))
         print(aux_msg)
         return False
-    elif data['id'] not in device_list and data['cmd'] != 'config':
-        aux_msg = {'status': 'error', 'msg': 'Unknown device', 'original_msg': data}
-        status_result = client.publish("mqttuya/monitor", json.dumps(aux_msg))
+
+    if data['id'] not in device_list and data['cmd'] != 'config':
+        aux_msg = {'status': 'error',
+                   'msg': 'Unknown device', 'original_msg': data}
+        client.publish("mqttuya/monitor", json.dumps(aux_msg))
         print(aux_msg)
         return False
 
@@ -121,39 +138,42 @@ def on_message(client, userdata, msg):
         device_list[data['id']].close()
         publish_status(client, data['id'])
     else:
-        aux_msg = {'status': 'error', 'msg': 'Unknown message', 'original_msg': data}
-        status_result = client.publish("mqttuya/monitor", json.dumps(aux_msg))
+        aux_msg = {'status': 'error',
+                   'msg': 'Unknown message', 'original_msg': data}
+        client.publish("mqttuya/monitor", json.dumps(aux_msg))
         print(aux_msg)
+
 
 def subscribe(client, topic_list):
     """
     Set target temp
 
     Args:
-        target_temp(int): target_temp to set
+        client(Client): active mqtt client
+        topic_list(list): list of topics to subscribe
     """
     for topic in topic_list:
         client.subscribe(topic)
+        print(f"Subscribed to {topic}")
     client.on_message = on_message
 
 
 def run():
     """
-    Set target temp
+    default run function: connect to broker and subscribe to topics
     """
 
-    broker = 'test.mosquitto.org'
-    port = 1883
-    sub_topic_list = ["mqttuya/sub"]
-    # generate client ID with pub prefix randomly
-    # client_id = f'mqttuya-{random.randint(0, 1000)}'
-    # username = 'emqx'
-    # password = 'public'
+    BROKER = os.getenv("BROKER", 'test.mosquitto.org')
+    PORT = int(os.getenv("PORT", '1883'))
+    USERNAME = os.getenv("USERNAME", None)
+    PASSWORD = os.getenv("PASSWORD", None)
+    CLIENTID = os.getenv("CLIENTID", None)
 
-    client = connect_mqtt(broker=broker, port=port, username=None, password=None, client_id=None)
-    # client.loop_start()
-    subscribe(client=client, topic_list=sub_topic_list)
-    print("Hello")
+    SUB_TOPICS_LIST = json.loads(os.getenv("SUB_TOPICS_LIST", "mqttuya/sub"))
+
+    client = connect_mqtt(broker=BROKER, port=PORT,
+                          username=USERNAME, password=PASSWORD, client_id=CLIENTID)
+    subscribe(client=client, topic_list=SUB_TOPICS_LIST)
     client.loop_forever()
 
 

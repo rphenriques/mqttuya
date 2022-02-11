@@ -9,3 +9,10 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/src
+    environment:
+      - BROKER
+      - PORT
+      - USERNAME
+      - PASSWORD
+      - CLIENTID
+      - SUB_TOPICS_LIST
