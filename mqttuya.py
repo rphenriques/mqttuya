@@ -31,7 +31,7 @@ def create_device(device_data):
         # TODO: BUT if IP is SET, the version returned may be wrong because find() is not used
         aux_device = towel_heater.TowelHeaterDevice(
             device['id'], device['ip'], device['key'])
-        if(device_data['ver'] == '3.3'):    # IMPORTANT to always set version
+        if(device['ver'] == '3.3'):    # IMPORTANT to always set version
             aux_device.set_version(3.3)
         else:
             aux_device.set_version(3.1)
@@ -91,7 +91,27 @@ def on_message(client, userdata, msg):
 
     data = json.loads(msg.payload)
     print(f"Received `{data}` from `{msg.topic}` topic")
-    if 'cmd' not in data or 'id' not in data:
+
+    if 'cmd' not in data:
+        aux_msg = {'status': 'error',
+                   'msg': 'Invalid message', 'original_msg': data}
+        client.publish("mqttuya/monitor", json.dumps(aux_msg))
+        print(aux_msg)
+        return False
+
+    if data['cmd'] == 'config':
+        if 'value' not in data:
+            aux_msg = {'status': 'error',
+                    'msg': 'Invalid message', 'original_msg': data}
+            client.publish("mqttuya/monitor", json.dumps(aux_msg))
+            print(aux_msg)
+            return False
+        create_device(device_data=data['value'])
+        for device in data['value']:
+            publish_status(client=client, device_id=device['id'])
+        return True
+
+    if 'value' not in data or 'id' not in data:
         aux_msg = {'status': 'error',
                    'msg': 'Invalid message', 'original_msg': data}
         client.publish("mqttuya/monitor", json.dumps(aux_msg))
@@ -105,10 +125,7 @@ def on_message(client, userdata, msg):
         print(aux_msg)
         return False
 
-    if data['cmd'] == 'config':
-        create_device(device_data=data['value'])
-        publish_status(client, data['value']['id'])
-    elif data['cmd'] == 'status':
+    if data['cmd'] == 'status':
         publish_status(client, data['id'])
     elif data['cmd'] == 'turn_on':
         device_list[data['id']].turn_on()
