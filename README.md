@@ -1,16 +1,24 @@
-# mqttuya
+# MQTTuya
 
 [![License](https://img.shields.io/github/license/rphenriques/mqttuya)](https://img.shields.io/github/license/rphenriques/mqttuya)
 
-Python module to interface with Tuya WiFi smart devices. 
+Python module to interface with Tuya WiFi smart devices.
 
 ## Description
 
 This is a wraper module around TinyTuya to extend it's funcionality to CREATE's Warm Towel Crystal Towel Heater https://www.create-store.com/pt/comprar-toalheiro-eletrico/72182-warm-towel-cristal-toalheiro-eletrico-de-vidro-com-wiffi.html and interface it with MQTT.
 
+## Run
+
+### Docker
+
+1. Clone this repository
+2. Copy `.env.default` to `.env` and edit values according to your configuration
+3. Run with docker compose: `docker compose up -d`
+
 ## Tuya Data Points - DPS Table
 
-### Version 3.3 - Towel Heater 
+### Version 3.3 - Towel Heater
 | DP ID        | Function Point | Type        | Range       | Units |
 | ------------- | ------------- | ------------- | ------------- |------------- |
 |1|Heater switch|bool|True/False|n/a|
@@ -25,7 +33,7 @@ The function of "Open Close" DP is not very clear, but if set to Close ("Low") t
 ## Credits
 
   * TinyTuya https://github.com/jasonacox/tinytuya by jasonacox.
-  
+
 ## Related Projects
 
   * https://github.com/TradeFace/tuyaface - Python Async Tuya API
