@@ -90,6 +90,8 @@ class TowelHeaterDevice(tinytuya.Device):
     def get_data(self):
         """Get "translated" status from device"""
         aux_status = self.status()
+        if 'dps' not in data:
+            return None
         data = {'state': 'ON' if aux_status['dps']['1'] else 'OFF',
                 'lock': 'LOCKED' if aux_status['dps']['2'] else 'UNLOCKED',
                 'target_temp': aux_status['dps']['3'],
