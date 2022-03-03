@@ -31,10 +31,10 @@ def create_device(device_data):
         # TODO: BUT if IP is SET, the version returned may be wrong because find() is not used
         aux_device = towel_heater.TowelHeaterDevice(
             device['id'], device['ip'], device['key'])
-        if(device['ver'] == '3.3'):    # IMPORTANT to always set version
-            aux_device.set_version(3.3)
-        else:
+        if(device['ver'] == '3.1'):    # IMPORTANT to always set version
             aux_device.set_version(3.1)
+        else:
+            aux_device.set_version(3.3)
         # Keep socket connection open between commands
         # aux_device.set_socketPersistent(True)
         device_list[device['id']] = aux_device
