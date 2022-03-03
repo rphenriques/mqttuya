@@ -79,8 +79,9 @@ def publish_status(client, device_id):
     print("Publishing status")
     client.publish(
         status_topic, json.dumps(device_list[device_id].status()))
-    client.publish(
-        data_topic, json.dumps(device_list[device_id].get_data()))
+    aux_data = device_list[device_id].get_data()
+    if aux_data is not None:
+        client.publish(data_topic, json.dumps(aux_data))
 
 
 def on_message(client, userdata, msg):
